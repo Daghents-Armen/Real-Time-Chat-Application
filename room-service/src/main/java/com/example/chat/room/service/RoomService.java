@@ -81,7 +81,6 @@ public class RoomService {
                 room.setOwnerUsername(nextOwner.get().getUsername());
                 roomRepository.save(room);
             } else {
-                roomMemberRepository.deleteByRoomId(roomId);
                 roomRepository.delete(room);
                 kafkaTemplate.send("room-deleted-topic", roomId.toString())
                         .whenComplete((result, ex) -> {
@@ -171,7 +170,6 @@ public class RoomService {
             throw new SecurityException("Only the room owner can delete this room.");
         }
 
-        roomMemberRepository.deleteByRoomId(roomId);
         roomRepository.delete(room);
         kafkaTemplate.send("room-deleted-topic", roomId.toString())
                 .whenComplete((result, ex) -> {
