@@ -113,6 +113,18 @@ public class RoomService {
         if (!room.getOwnerUsername().equals(adminUsername)) {
             throw new SecurityException("Only the room owner can kick users.");
         }
+
+        if (room.getOwnerUsername().equals(userToKick)) {
+            throw new IllegalArgumentException("Owner cannot be kicked.");
+        }
+
+        boolean exists = roomMemberRepository
+                .existsByRoomIdAndUsername(roomId, userToKick);
+
+        if (!exists) {
+            throw new IllegalArgumentException("User is not in this room.");
+        }
+
         roomMemberRepository.deleteByRoomIdAndUsername(roomId, userToKick);
     }
 
