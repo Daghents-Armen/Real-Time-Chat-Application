@@ -83,11 +83,25 @@ public class RoomService {
             } else {
                 roomMemberRepository.deleteByRoomId(roomId);
                 roomRepository.delete(room);
-                kafkaTemplate.send("room-deleted-topic", roomId.toString());
+                kafkaTemplate.send("room-deleted-topic", roomId.toString())
+                        .whenComplete((result, ex) -> {
+                            if (ex == null) {
+                                var meta = result.getRecordMetadata();
+                                System.out.println(
+                                        "Kafka SENT successfully: topic="
+                                                + meta.topic()
+                                                + " partition="
+                                                + meta.partition()
+                                                + " offset="
+                                                + meta.offset()
+                                );
+                            } else {
+                                System.err.println("Kafka FAILED: " + ex.getMessage());
+                            }
+                        });
                 return;
             }
         }
-
         roomMemberRepository.deleteByRoomIdAndUsername(roomId, username);
     }
 
@@ -99,7 +113,6 @@ public class RoomService {
         if (!room.getOwnerUsername().equals(adminUsername)) {
             throw new SecurityException("Only the room owner can kick users.");
         }
-
         roomMemberRepository.deleteByRoomIdAndUsername(roomId, userToKick);
     }
 
@@ -148,6 +161,21 @@ public class RoomService {
 
         roomMemberRepository.deleteByRoomId(roomId);
         roomRepository.delete(room);
-        kafkaTemplate.send("room-deleted-topic", roomId.toString());
+        kafkaTemplate.send("room-deleted-topic", roomId.toString())
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        var meta = result.getRecordMetadata();
+                        System.out.println(
+                                "Kafka SENT successfully: topic="
+                                        + meta.topic()
+                                        + " partition="
+                                        + meta.partition()
+                                        + " offset="
+                                        + meta.offset()
+                        );
+                    } else {
+                        System.err.println("Kafka FAILED: " + ex.getMessage());
+                    }
+                });
     }
 }
