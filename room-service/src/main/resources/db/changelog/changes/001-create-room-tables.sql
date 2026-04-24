@@ -15,4 +15,4 @@ CREATE TABLE room_members (
     CONSTRAINT fk_room FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_rooms_owner_username ON rooms(ownerd_username);
+CREATE INDEX idx_rooms_owner_username ON rooms(owner_username);
