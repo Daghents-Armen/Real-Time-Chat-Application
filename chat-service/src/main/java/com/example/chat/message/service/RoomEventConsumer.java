@@ -22,10 +22,13 @@ public class RoomEventConsumer {
     public void handleRoomDeleted(String roomIdStr) {
         try {
             UUID roomId = UUID.fromString(roomIdStr);
+
             chatMessageRepository.deleteByRoomId(roomId);
-            log.info("Successfully deleted all chat messages for deleted room: {}", roomId);
+
+            log.info("SUCCESS: Deleted messages for room {}", roomId);
         } catch (Exception e) {
-            log.error("Failed to process room deletion event for room: {}", roomIdStr, e);
+            log.error("FAILED: Processing room deletion event for roomId={}. Will be retried by Kafka.", roomIdStr, e);
+            throw e;
         }
     }
 }
