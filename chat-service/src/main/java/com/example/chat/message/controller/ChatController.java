@@ -64,6 +64,7 @@ public class ChatController {
                     emitter.send(SseEmitter.event().name("message").data(message));
                 } catch (Exception e) {
                     emitter.complete();
+                    roomEmitters.get(roomId).remove(user);
                 }
             });
         }
