@@ -2,6 +2,9 @@ package com.example.chat.room.service;
 
 import com.example.chat.room.dto.RoomRequest;
 import com.example.chat.room.dto.RoomResponse;
+import com.example.chat.room.exception.BadRequestException;
+import com.example.chat.room.exception.RoomNotFoundException;
+import com.example.chat.room.exception.UnauthorizedRoomAccessException;
 import com.example.chat.room.model.Room;
 import com.example.chat.room.model.RoomMember;
 import com.example.chat.room.repository.RoomMemberRepository;
@@ -10,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,14 +31,14 @@ public class RoomService {
     @Transactional
     public RoomResponse createRoom(RoomRequest request, String ownerUsername) {
         if (roomRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("A room with this name already exists.");
+            throw new BadRequestException("A room with this name already exists.");
         }
 
         Room room = new Room();
         room.setName(request.getName());
         room.setDescription(request.getDescription());
         room.setOwnerUsername(ownerUsername);
-        room.setCreatedAt(java.time.LocalDateTime.now());
+        room.setCreatedAt(LocalDateTime.now());
 
         Room savedRoom = roomRepository.save(room);
 
@@ -54,12 +58,13 @@ public class RoomService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public void joinRoom(UUID roomId, String username) {
         if (!roomRepository.existsById(roomId)) {
-            throw new IllegalArgumentException("Room does not exist.");
+            throw new RoomNotFoundException("Room with ID " + roomId + " does not exist.");
         }
         if (roomMemberRepository.existsByRoomIdAndUsername(roomId, username)) {
-            throw new IllegalArgumentException("User is already in this room.");
+            throw new BadRequestException("User is already in this room.");
         }
 
         RoomMember member = new RoomMember();
@@ -71,7 +76,7 @@ public class RoomService {
     @Transactional
     public void leaveRoom(UUID roomId, String username) {
         Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+                .orElseThrow(() -> new RoomNotFoundException("Room with ID " + roomId + " does not exist."));
 
         if (room.getOwnerUsername().equals(username)) {
             Optional<RoomMember> nextOwner = roomMemberRepository
@@ -82,22 +87,7 @@ public class RoomService {
                 roomRepository.save(room);
             } else {
                 roomRepository.delete(room);
-                kafkaTemplate.send("room-deleted-topic", roomId.toString())
-                        .whenComplete((result, ex) -> {
-                            if (ex == null) {
-                                var meta = result.getRecordMetadata();
-                                System.out.println(
-                                        "Kafka SENT successfully: topic="
-                                                + meta.topic()
-                                                + " partition="
-                                                + meta.partition()
-                                                + " offset="
-                                                + meta.offset()
-                                );
-                            } else {
-                                System.err.println("Kafka FAILED: " + ex.getMessage());
-                            }
-                        });
+                sendRoomDeletedEvent(roomId);
                 return;
             }
         }
@@ -107,36 +97,37 @@ public class RoomService {
     @Transactional
     public void kickUser(UUID roomId, String adminUsername, String userToKick) {
         Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+                .orElseThrow(() -> new RoomNotFoundException("Room with ID " + roomId + " does not exist."));
 
         if (!room.getOwnerUsername().equals(adminUsername)) {
-            throw new SecurityException("Only the room owner can kick users.");
+            throw new UnauthorizedRoomAccessException("Only the room owner can kick users.");
         }
 
         if (room.getOwnerUsername().equals(userToKick)) {
-            throw new IllegalArgumentException("Owner cannot be kicked.");
+            throw new BadRequestException("Owner cannot be kicked.");
         }
 
         boolean exists = roomMemberRepository
                 .existsByRoomIdAndUsername(roomId, userToKick);
 
         if (!exists) {
-            throw new IllegalArgumentException("User is not in this room.");
+            throw new BadRequestException("User is not in this room.");
         }
 
         roomMemberRepository.deleteByRoomIdAndUsername(roomId, userToKick);
     }
 
+    @Transactional
     public void addUser(UUID roomId, String adminUsername, String userToAdd) {
         Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+                .orElseThrow(() -> new RoomNotFoundException("Room with ID " + roomId + " does not exist."));
 
         if (!room.getOwnerUsername().equals(adminUsername)) {
-            throw new SecurityException("Only the room owner can add users directly.");
+            throw new UnauthorizedRoomAccessException("Only the room owner can kick users.");
         }
 
         if (roomMemberRepository.existsByRoomIdAndUsername(roomId, userToAdd)) {
-            throw new IllegalArgumentException("User is already in this room.");
+            throw new BadRequestException("User is already in this room.");
         }
 
         RoomMember member = new RoomMember();
@@ -165,23 +156,24 @@ public class RoomService {
     @Transactional
     public void deleteRoom(UUID roomId, String adminUsername) {
         Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+                .orElseThrow(() -> new RoomNotFoundException("Room with ID " + roomId + " does not exist."));
         if (!room.getOwnerUsername().equals(adminUsername)) {
-            throw new SecurityException("Only the room owner can delete this room.");
+            throw new UnauthorizedRoomAccessException("Only the room owner can delete this room.");
         }
 
         roomRepository.delete(room);
+        sendRoomDeletedEvent(roomId);
+    }
+
+    private void sendRoomDeletedEvent(UUID roomId) {
         kafkaTemplate.send("room-deleted-topic", roomId.toString())
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
                         var meta = result.getRecordMetadata();
                         System.out.println(
-                                "Kafka SENT successfully: topic="
-                                        + meta.topic()
-                                        + " partition="
-                                        + meta.partition()
-                                        + " offset="
-                                        + meta.offset()
+                                "Kafka SENT successfully: topic=" + meta.topic() +
+                                        " partition=" + meta.partition() +
+                                        " offset=" + meta.offset()
                         );
                     } else {
                         System.err.println("Kafka FAILED: " + ex.getMessage());
