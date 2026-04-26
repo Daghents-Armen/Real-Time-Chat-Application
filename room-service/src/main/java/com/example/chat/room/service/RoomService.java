@@ -133,7 +133,7 @@ public class RoomService {
         RoomMember member = new RoomMember();
         member.setRoomId(roomId);
         member.setUsername(userToAdd);
-        member.setJoinedAt(java.time.LocalDateTime.now());
+        member.setJoinedAt(LocalDateTime.now());
         roomMemberRepository.save(member);
     }
 

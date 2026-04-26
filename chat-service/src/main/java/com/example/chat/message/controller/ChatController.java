@@ -39,6 +39,8 @@ public class ChatController {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         String username = principal.getName();
 
+        chatService.verifyUserInRoom(roomId, username);
+
         roomEmitters.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>()).put(username, emitter);
 
         emitter.onCompletion(() -> roomEmitters.get(roomId).remove(username));
@@ -52,8 +54,9 @@ public class ChatController {
     public Page<ChatMessage> getChatHistory(
             @PathVariable UUID roomId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return chatService.getChatHistory(roomId, PageRequest.of(page, size));
+            @RequestParam(defaultValue = "20") int size,
+            Principal principal) {
+        return chatService.getChatHistory(roomId, principal.getName(), PageRequest.of(page, size));
     }
 
     private void broadcastMessage(UUID roomId, ChatMessage message) {
