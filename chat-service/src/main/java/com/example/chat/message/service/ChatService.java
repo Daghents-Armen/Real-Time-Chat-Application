@@ -5,6 +5,7 @@ import com.example.chat.message.model.ChatMessage;
 import com.example.chat.message.repository.ChatMessageRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -17,11 +18,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ChatService {
 
@@ -42,26 +45,47 @@ public class ChatService {
 
     public void verifyUserInRoom(UUID roomId, String username) {
         String url = "http://room-service:8081/api/rooms/" + roomId + "/members";
+        log.debug("Starting room membership verification for user: {} in room: {}", username, roomId);
 
         try {
-            HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-            String authHeader = request.getHeader("Authorization");
-
             HttpHeaders headers = new HttpHeaders();
-            if (authHeader != null) {
-                headers.set("Authorization", authHeader);
+
+            var attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                String authHeader = request.getHeader("Authorization");
+
+                if (authHeader != null) {
+                    log.debug("Authorization header found, attaching to Room Service request.");
+                    headers.set("Authorization", authHeader);
+                } else {
+                    log.debug("No Authorization header found in the current request.");
+                }
+            } else {
+                log.debug("No active web request context found. Proceeding without Authorization header.");
             }
+
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<List> response = restTemplate.exchange(url, HttpMethod.GET, entity, List.class);
-            List<?> members = response.getBody();
+            log.debug("Calling Room Service at: {}", url);
+            ParameterizedTypeReference<List<String>> responseType = new ParameterizedTypeReference<>() {};
+
+            ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, entity, responseType);
+
+            List<String> members = response.getBody();
 
             if (members == null || !members.contains(username)) {
+                log.warn("Verification failed: User {} is not a member of room {}", username, roomId);
                 throw new UnauthorizedChatAccessException("You are not a member of this room.");
             }
+
+            log.info("Successfully verified user {} is a member of room {}", username, roomId);
+
         } catch (UnauthorizedChatAccessException e) {
             throw e;
         } catch (Exception e) {
+            log.error("System error while verifying membership for user {} in room {}. Error: {}", username, roomId, e.getMessage(), e);
             throw new UnauthorizedChatAccessException("Failed to verify room membership with Room Service.");
         }
     }
@@ -76,7 +100,10 @@ public class ChatService {
                 .timestamp(LocalDateTime.now())
                 .build();
 
+        log.debug("Saving message for user {} in room {}", senderUsername, roomId);
         ChatMessage saved = repository.save(message);
+        log.info("Message saved by {} in room {}", senderUsername, roomId);
+        log.debug("Sending message to Kafka topic chat-messages-topic for room {}", roomId);
         kafkaTemplate.send("chat-messages-topic", roomId.toString(), saved);
 
         messageCounter.increment();
