@@ -46,7 +46,7 @@ public class RoomService {
         member.setRoomId(savedRoom.getId());
         member.setUsername(ownerUsername);
 
-        member.setJoinedAt(java.time.LocalDateTime.now());
+        member.setJoinedAt(LocalDateTime.now());
         roomMemberRepository.save(member);
 
         return mapToResponse(savedRoom);

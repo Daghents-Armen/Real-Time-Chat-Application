@@ -1,4 +1,7 @@
 package com.example.chat.auth.exception;
 
-public class TokenRefreshException {
+public class TokenRefreshException extends RuntimeException {
+    public TokenRefreshException(String message) {
+        super(message);
+    }
 }
