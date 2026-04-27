@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -90,6 +91,7 @@ public class ChatService {
         }
     }
 
+    @Transactional
     public ChatMessage saveAndSendMessage(UUID roomId, String senderUsername, String content) {
         verifyUserInRoom(roomId, senderUsername);
 
@@ -113,6 +115,7 @@ public class ChatService {
 
     public Page<ChatMessage> getChatHistory(UUID roomId, String username, Pageable pageable) {
         verifyUserInRoom(roomId, username);
+        log.debug("Fetching chat history from database for room {}", roomId);
 
         return repository.findByRoomIdOrderByTimestampDesc(roomId, pageable);
     }
