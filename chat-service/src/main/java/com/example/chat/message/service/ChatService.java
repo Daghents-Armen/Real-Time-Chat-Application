@@ -45,7 +45,7 @@ public class ChatService {
     }
 
     public void verifyUserInRoom(UUID roomId, String username) {
-        String url = "http://room-service:8081/api/rooms/" + roomId + "/members";
+        String url = "http://room-service:8082/api/rooms/" + roomId + "/members";
         log.debug("Starting room membership verification for user: {} in room: {}", username, roomId);
 
         try {

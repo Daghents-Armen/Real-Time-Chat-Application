@@ -12,6 +12,7 @@ import com.example.chat.auth.repository.RefreshTokenRepository;
 import com.example.chat.auth.repository.UserRepository;
 import com.example.chat.auth.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -31,6 +33,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        log.info("Attempting to register new user with username: {}", request.getUsername());
+
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Username is already taken");
         }
@@ -45,11 +49,15 @@ public class AuthService {
                 .build();
 
         user = userRepository.save(user);
+        log.info("Successfully registered new user: {}", user.getUsername());
+
         return createAuthSession(user);
     }
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        log.info("Login attempt for username: {}", request.getUsername());
+
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid username or password"));
 
@@ -57,6 +65,7 @@ public class AuthService {
             throw new InvalidCredentialsException("Invalid username or password");
         }
 
+        log.info("User {} successfully authenticated", user.getUsername());
         return createAuthSession(user);
     }
 
@@ -71,6 +80,8 @@ public class AuthService {
 
         refreshTokenRepository.deleteByUser(user);
         refreshTokenRepository.save(refreshToken);
+
+        log.debug("Created new auth session (Access & Refresh tokens) for user: {}", user.getUsername());
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
@@ -89,11 +100,19 @@ public class AuthService {
         }
 
         User user = refreshToken.getUser();
+        log.info("Generating new access token for user: {} via refresh token", user.getUsername());
+
         String newAccessToken = jwtProvider.generateAccessToken(user.getUsername());
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
                 .username(user.getUsername())
                 .build();
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        log.info("Processing logout. Deleting refresh token from database.");
+        refreshTokenRepository.deleteByToken(refreshToken);
     }
 }

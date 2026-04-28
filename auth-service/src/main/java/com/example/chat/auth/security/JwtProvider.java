@@ -15,7 +15,7 @@ public class JwtProvider {
     @Value("${APP_JWT_SECRET}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration-ms:900000}")
+    @Value("${APP_JWT_EXPIRATION_MS:3600000}")
     private long jwtExpirationMs;
 
     private SecretKey getSigningKey() {
@@ -30,26 +30,5 @@ public class JwtProvider {
                 .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(getSigningKey())
                 .compact();
-    }
-
-    public String getUsernameFromToken(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
-    }
-
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 }
