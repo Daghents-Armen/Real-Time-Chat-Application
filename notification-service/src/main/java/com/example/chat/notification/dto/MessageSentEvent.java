@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-public class ChatMessageEvent {
+public class MessageSentEvent {
     private UUID id;
     private UUID roomId;
     private String senderUsername;
