@@ -4,6 +4,7 @@ import com.example.chat.message.exception.UnauthorizedChatAccessException;
 import com.example.chat.message.model.ChatMessage;
 import com.example.chat.message.repository.ChatMessageRepository;
 import io.micrometer.core.instrument.Counter;
+import org.springframework.beans.factory.annotation.Value;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,9 @@ public class ChatService {
     private final Counter messageCounter;
     private final RestTemplate restTemplate;
 
+    @Value("${ROOM_SERVICE_URL:http://localhost:8082}")
+    private String roomServiceBaseUrl;
+
     public ChatService(ChatMessageRepository repository, KafkaTemplate<String, Object> kafkaTemplate, MeterRegistry meterRegistry, RestTemplate restTemplate) {
         this.repository = repository;
         this.kafkaTemplate = kafkaTemplate;
@@ -45,7 +49,7 @@ public class ChatService {
     }
 
     public void verifyUserInRoom(UUID roomId, String username) {
-        String url = "http://room-service:8082/api/rooms/" + roomId + "/members";
+        String url = roomServiceBaseUrl + "/api/rooms/" + roomId + "/members";
         log.debug("Starting room membership verification for user: {} in room: {}", username, roomId);
 
         try {
