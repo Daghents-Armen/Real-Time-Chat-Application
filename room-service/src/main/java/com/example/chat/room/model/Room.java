@@ -1,5 +1,6 @@
 package com.example.chat.room.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -25,6 +26,7 @@ public class Room {
     private String ownerUsername;
 
     @CreationTimestamp
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }
