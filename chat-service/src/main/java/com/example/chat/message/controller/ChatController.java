@@ -38,6 +38,7 @@ public class ChatController {
         return saved;
     }
 
+    @io.swagger.v3.oas.annotations.Hidden
     @GetMapping(value = "/{roomId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamMessages(@PathVariable UUID roomId, Principal principal) {
         String username = principal.getName();
