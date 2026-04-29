@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: room-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://room-db:5432/room_db}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}
