@@ -42,3 +42,6 @@ management:
 app:
   jwt:
     secret: ${APP_JWT_SECRET}
+
+  room-service:
+    url: ${ROOM_SERVICE_URL:http://localhost:8082}
