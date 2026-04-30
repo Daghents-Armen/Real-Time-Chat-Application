@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'chat-system'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'auth-service:8080'
+          - 'room-service:8080'
+          - 'chat-service:8080'
+          - 'notification-service:8080'
