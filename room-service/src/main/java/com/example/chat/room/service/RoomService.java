@@ -5,6 +5,8 @@ import com.example.chat.room.dto.RoomResponse;
 import com.example.chat.room.exception.BadRequestException;
 import com.example.chat.room.exception.RoomNotFoundException;
 import com.example.chat.room.exception.UnauthorizedRoomAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.example.chat.room.model.Room;
 import com.example.chat.room.model.RoomMember;
 import com.example.chat.room.repository.RoomMemberRepository;
@@ -59,12 +61,11 @@ public class RoomService {
         return mapToResponse(savedRoom);
     }
 
-    public List<RoomResponse> getAllRooms() {
-        log.debug("Fetching all rooms from the database.");
+    public Page<RoomResponse> getAllRooms(Pageable pageable) {
+        log.debug("Fetching a page of rooms from the database.");
 
-        return roomRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return roomRepository.findAll(pageable)
+                .map(this::mapToResponse);
     }
 
     @Transactional

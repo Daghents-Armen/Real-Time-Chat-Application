@@ -4,6 +4,9 @@ import com.example.chat.room.dto.RoomRequest;
 import com.example.chat.room.dto.RoomResponse;
 import com.example.chat.room.service.RoomService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -30,9 +33,15 @@ public class RoomController {
     }
 
     @GetMapping
-    public ResponseEntity<List<RoomResponse>> getAllRooms() {
-        log.info("API Request: Fetching all rooms");
-        return ResponseEntity.ok(roomService.getAllRooms());
+    public ResponseEntity<Page<RoomResponse>> getAllRooms(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        log.info("API Request: Fetching rooms - Page: {}, Size: {}", page, size);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return ResponseEntity.ok(roomService.getAllRooms(pageable));
     }
 
     @PostMapping("/{roomId}/join")
