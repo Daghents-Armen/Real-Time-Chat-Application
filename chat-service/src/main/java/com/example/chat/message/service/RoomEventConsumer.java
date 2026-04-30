@@ -16,7 +16,7 @@ public class RoomEventConsumer {
     private final ChatMessageRepository chatMessageRepository;
 
     @SuppressWarnings("unused")
-    @KafkaListener(topics = "room-deleted-topic", groupId = "chat-service-group-v2")
+    @KafkaListener(topics = "room-deleted-topic")
     @Transactional
     public void handleRoomDeleted(String roomIdStr) {
         try {

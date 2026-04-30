@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class NotificationListener {
-    @KafkaListener(topics = "chat-messages-topic", groupId = "notification-group-v3")
+    @KafkaListener(topics = "chat-messages-topic")
     public void handleNewMessage(MessageSentEvent event) {
         log.info("Activity in Room: {}", event.getRoomId());
         log.info("User [{}] sent a message.", event.getSenderUsername());
