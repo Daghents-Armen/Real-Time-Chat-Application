@@ -22,7 +22,7 @@ Synchronous communications between services are fortified with strict timeouts a
 #### 3. Chat Service (`:8083`)
 * **Responsibility:** Handles sending and retrieving chat messages.
 * **Fault Tolerance:** Makes a synchronous HTTP REST call to the Room Service to verify membership before allowing a message to be sent. If Room Service is down, it gracefully degrades to a `503 Service Unavailable` response to prevent thread exhaustion.
-* **Events:** * *Consumes:* Listens to `RoomDeletedEvent` from Kafka to safely wipe message history for deleted rooms.
+* **Events:**  *Consumes:* Listens to `RoomDeletedEvent` from Kafka to safely wipe message history for deleted rooms.
     * *Produces:* Publishes `MessageSentEvent` when new messages are sent.
 * **Database:** `chat_db` (Isolated PostgreSQL)
 
