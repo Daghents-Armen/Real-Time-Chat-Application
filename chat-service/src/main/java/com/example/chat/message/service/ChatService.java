@@ -1,6 +1,9 @@
 package com.example.chat.message.service;
 
+import com.example.chat.message.exception.RoomServiceUnavailableException;
 import com.example.chat.message.exception.UnauthorizedChatAccessException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.HttpServerErrorException;
 import com.example.chat.message.model.ChatMessage;
 import com.example.chat.message.repository.ChatMessageRepository;
 import io.micrometer.core.instrument.Counter;
@@ -89,9 +92,15 @@ public class ChatService {
 
         } catch (UnauthorizedChatAccessException e) {
             throw e;
+        } catch (ResourceAccessException e) {
+            log.error("Timeout or connection error to Room Service: {}", e.getMessage());
+            throw new RoomServiceUnavailableException("Room Service is currently unavailable. Please try again later.");
+        } catch (HttpServerErrorException e) {
+            log.error("Room Service returned 5xx error: {}", e.getStatusCode());
+            throw new RoomServiceUnavailableException("Room Service encountered an unexpected error.");
         } catch (Exception e) {
             log.error("System error while verifying membership for user {} in room {}. Error: {}", username, roomId, e.getMessage(), e);
-            throw new UnauthorizedChatAccessException("Failed to verify room membership with Room Service.");
+            throw new RuntimeException("Unexpected error verifying room membership.");
         }
     }
 
