@@ -1,5 +1,6 @@
 package com.example.chat.room.service;
 
+import com.example.chat.room.dto.RoomDeletedEvent;
 import com.example.chat.room.dto.RoomRequest;
 import com.example.chat.room.dto.RoomResponse;
 import com.example.chat.room.exception.BadRequestException;
@@ -30,7 +31,7 @@ public class RoomService {
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional
     public RoomResponse createRoom(RoomRequest request, String ownerUsername) {
@@ -108,7 +109,8 @@ public class RoomService {
             } else {
                 log.info("Owner left and room {} is empty. Deleting room.", roomId);
                 roomRepository.delete(room);
-                sendRoomDeletedEvent(roomId);
+                RoomDeletedEvent event = new RoomDeletedEvent(roomId, username, LocalDateTime.now());
+                sendRoomDeletedEvent(roomId, event);
                 return;
             }
         }
@@ -199,23 +201,22 @@ public class RoomService {
         }
 
         roomRepository.delete(room);
+        RoomDeletedEvent event = new RoomDeletedEvent(roomId, adminUsername, LocalDateTime.now());
         log.info("Room {} was successfully deleted by admin {}", roomId, adminUsername);
-        sendRoomDeletedEvent(roomId);
+        sendRoomDeletedEvent(roomId, event);
     }
 
-    private void sendRoomDeletedEvent(UUID roomId) {
+    private void sendRoomDeletedEvent(UUID roomId, RoomDeletedEvent event) {
         log.debug("Publishing room-deleted event to Kafka for room {}", roomId);
-        kafkaTemplate.send("room-deleted-topic", roomId.toString())
+        kafkaTemplate.send("room-deleted-topic", event)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
                         var meta = result.getRecordMetadata();
-                        System.out.println(
-                                "Kafka SENT successfully: topic=" + meta.topic() +
-                                        " partition=" + meta.partition() +
-                                        " offset=" + meta.offset()
-                        );
+                        log.info("Kafka SENT successfully: topic={} partition={} offset={}",
+                                meta.topic(), meta.partition(), meta.offset());
                     } else {
-                        System.err.println("Kafka FAILED: " + ex.getMessage());
+                        log.error("Kafka FAILED to send room-deleted event for room {}: {}",
+                                roomId, ex.getMessage(), ex);
                     }
                 });
     }
