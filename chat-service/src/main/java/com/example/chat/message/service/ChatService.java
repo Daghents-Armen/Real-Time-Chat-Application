@@ -119,7 +119,16 @@ public class ChatService {
         ChatMessage saved = repository.save(message);
         log.info("Message saved by {} in room {}", senderUsername, roomId);
         log.debug("Sending message to Kafka topic chat-messages-topic for room {}", roomId);
-        kafkaTemplate.send("chat-messages-topic", roomId.toString(), saved);
+        kafkaTemplate.send("chat-messages-topic", roomId.toString(), saved)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.debug("Kafka SENT successfully: messageId={} to topic={}",
+                                saved.getId(), result.getRecordMetadata().topic());
+                    } else {
+                        log.error("Kafka FAILED to send messageId={} for room {}: {}",
+                                saved.getId(), roomId, ex.getMessage(), ex);
+                    }
+                });
 
         messageCounter.increment();
 
