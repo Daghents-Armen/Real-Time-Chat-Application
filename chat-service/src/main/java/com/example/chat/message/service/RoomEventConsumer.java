@@ -1,6 +1,6 @@
 package com.example.chat.message.service;
 
-import com.example.chat.room.dto.RoomDeletedEvent;
+import com.example.chat.message.dto.RoomDeletedEvent;
 import com.example.chat.message.repository.ChatMessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
