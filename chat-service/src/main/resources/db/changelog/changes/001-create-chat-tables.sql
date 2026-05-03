@@ -7,3 +7,6 @@ CREATE TABLE messages (
 );
 
 CREATE INDEX idx_messages_room_id ON messages(room_id);
+
+-- rollback DROP INDEX idx_messages_room_id;
+-- rollback DROP TABLE messages;

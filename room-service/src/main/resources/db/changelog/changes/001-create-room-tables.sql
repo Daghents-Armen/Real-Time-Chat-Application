@@ -16,3 +16,7 @@ CREATE TABLE room_members (
 );
 
 CREATE INDEX idx_rooms_owner_username ON rooms(owner_username);
+
+-- rollback DROP INDEX idx_rooms_owner_username;
+-- rollback DROP TABLE room_members;
+-- rollback DROP TABLE rooms;
